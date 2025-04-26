@@ -1,8 +1,10 @@
-# Progression Generator (chord-generator)
+# [Progression Generator (chord-generator)](https://qlaub.github.io/progression-generator/)
 
-Generate and playback chord progressions with ease
+[Click here](https://qlaub.github.io/progression-generator/) to view the application
 
-Upcoming features:
+## Generate and playback chord progressions with ease
+
+## Upcoming features:
 
 - Saving progressions
 - Exporting progressions to midi
