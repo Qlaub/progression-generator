@@ -43,7 +43,7 @@ export default defineConfig((/* ctx */) => {
       publicPath: '/progression-generator/',
 
       extendViteConf(viteConf) {
-        viteConf.base = '/progression-generator/';   // 👈 Add this!
+        viteConf.base = '/progression-generator/';
       },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
