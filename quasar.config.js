@@ -40,6 +40,8 @@ export default defineConfig((/* ctx */) => {
         node: 'node20'
       },
 
+      publicPath: '/progression-generator/',
+
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
       // vueDevtools,
@@ -58,7 +60,7 @@ export default defineConfig((/* ctx */) => {
 
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},
-      
+
       vitePlugins: [
         ['vite-plugin-checker', {
           eslint: {
