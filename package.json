@@ -13,7 +13,7 @@
     "dev": "quasar dev",
     "build": "quasar build",
     "postinstall": "quasar prepare",
-    "deploy": "push-dir --dir=dist/spa --remote=gh-pages --branch=master --cleanup"
+    "deploy": "push-dir --dir=dist/spa --remote=gh-pages --branch=main --cleanup"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
