@@ -1,6 +1,6 @@
-# [Progression Generator (chord-generator)](https://qlaub.github.io/progression-generator/)
+# [Progression Generator (chord-generator)](https://fastidious-liger-e2ccb6.netlify.app/#/)
 
-[Click here](https://qlaub.github.io/progression-generator/) to view the application
+[Click here](https://fastidious-liger-e2ccb6.netlify.app/#/) to view the application
 
 ## Generate and playback chord progressions with ease
 
