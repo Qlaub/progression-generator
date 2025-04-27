@@ -5,7 +5,7 @@
   "productName": "Progression Generator",
   "author": "Alex Glaubitz <e.pirazzi@gmail.com>",
   "type": "module",
-  "private": true,
+  "private": false,
   "scripts": {
     "lint": "eslint -c ./eslint.config.js \"./src*/**/*.{js,cjs,mjs,vue}\"",
     "format": "prettier --write \"**/*.{js,vue,scss,html,md,json}\" --ignore-path .gitignore",
