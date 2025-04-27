@@ -1,4 +1,4 @@
-const minorTriadMap = {
+export const minorTriadMap = {
   C: ['C', 'Eb', 'G'],
   'C#': ['C#', 'E', 'G#'],
   Db: ['C#', 'E', 'G#'],
@@ -18,7 +18,7 @@ const minorTriadMap = {
   B: ['B', 'D', 'F#'],
 }
 
-const majorTriadMap = {
+export const majorTriadMap = {
   C: ['C', 'E', 'G'],
   'C#': ['Db', 'F', 'Ab'],
   Db: ['Db', 'F', 'Ab'],
@@ -38,7 +38,22 @@ const majorTriadMap = {
   B: ['B', 'D#', 'F#'],
 }
 
-const harmonicMinorScaleMap = {
+export const dimTriadMap = {
+  C: ['C', 'Eb', 'Gb'],
+  'C#': ['C#', 'E', 'G'],
+  D: ['D', 'F', 'Ab'],
+  'D#': ['D#', 'F#', 'A'],
+  E: ['E', 'G', 'Bb'],
+  F: ['F', 'Ab', 'Cb'],
+  'F#': ['F#', 'A', 'C#'],
+  G: ['G', 'Bb', 'Db'],
+  'G#': ['G#', 'B', 'D'],
+  A: ['A', 'C', 'Eb'],
+  'A#': ['A#', 'C#', 'E'],
+  B: ['B', 'D', 'F'],
+}
+
+export const harmonicMinorScaleMap = {
   C: ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'B'],
   D: ['D', 'E', 'F', 'G', 'A', 'Bb', 'C#'],
   E: ['E', 'F#', 'G', 'A', 'B', 'C', 'D#'],
@@ -48,7 +63,7 @@ const harmonicMinorScaleMap = {
   B: ['B', 'C#', 'D', 'E', 'F#', 'G', 'A#'],
 }
 
-const majorScaleMap = {
+export const majorScaleMap = {
   C: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
   D: ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'],
   E: ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'],
@@ -58,7 +73,7 @@ const majorScaleMap = {
   B: ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#'],
 }
 
-const romanNumeralToIndexMap = {
+export const romanNumeralToIndexMap = {
   i: 0,
   ii: 1,
   iii: 2,
@@ -68,27 +83,4 @@ const romanNumeralToIndexMap = {
   vii: 6,
 }
 
-function generateBasicChordNotes(tonic, mode, chordRomanNumeral) {
-  let chordQuality
-
-  if (chordRomanNumeral == chordRomanNumeral.toUpperCase()) {
-    chordQuality = 'major'
-  }
-  if (chordRomanNumeral == chordRomanNumeral.toLowerCase()) {
-    chordQuality = 'minor'
-  }
-
-  const chordIndex = romanNumeralToIndexMap[chordRomanNumeral.toLowerCase()]
-  const scale =
-    mode === 'minor'
-      ? harmonicMinorScaleMap[tonic.toUpperCase()]
-      : majorScaleMap[tonic.toUpperCase()]
-
-  const root = scale[chordIndex]
-
-  const chordArray = chordQuality === 'minor' ? minorTriadMap[root] : majorTriadMap[root]
-
-  return chordArray
-}
-
-export { generateBasicChordNotes }
+export const notesOctaveSort = ['C', 'D', 'E', 'F', 'G', 'A', 'B']

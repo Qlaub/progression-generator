@@ -1,5 +1,5 @@
 <template>
-  <q-page class="flex column flex-center full-width">
+  <q-page class="flex column flex-center full-width bg-blue-4">
     <div class="q-mt-lg">
       <q-btn color="primary" size="xl" class="q-mr-sm" @click="handleGenerateProgression"
         >Generate</q-btn
@@ -8,7 +8,7 @@
         color="primary"
         size="xl"
         @click="playProgression"
-        :disable="progressionArray.length == 0"
+        :disable="progressionAsChords.length == 0"
         >{{ isPlaying ? 'Stop playing' : 'Play progression' }}</q-btn
       >
     </div>
@@ -16,70 +16,73 @@
       <div>Progression:</div>
       <div
         class="q-ml-sm q-pa-sm rounded-borders"
-        :class="progressionArray.length === 0 ? 'bg-yellow-2' : 'bg-green-2'"
+        :class="progressionAsChords.length === 0 ? 'bg-yellow-2' : 'bg-green-2'"
       >
-        {{ progressionString ? progressionString : '&nbsp;' }}
+        {{
+          progressionAsRomanNumerals.length > 0 ? progressionAsRomanNumerals.join('-') : '&nbsp;'
+        }}
       </div>
     </div>
 
     <!-- Options -->
-    <div class="q-mt-xl bg-blue-2 rounded-borders q-pa-md">
-      <div class="text-h4 text-center q-mb-lg">Options</div>
+    <div class="q-mt-xl rounded-borders options-border bg-blue-1">
+      <div class="text-h4 bg-blue-1 q-py-sm row justify-center options-header-border">Options</div>
 
-      <div class="q-mt-md row items-center options-width">
-        <div class="q-mr-sm text-h6 col">Key:</div>
-        <div class="col-5">
-          <q-select outlined v-model="key" :options="keyOptions" />
+      <div class="q-pa-md">
+        <div class="row items-center options-width">
+          <div class="q-mr-sm text-h6 col">Key:</div>
+          <div class="col-5">
+            <q-select outlined v-model="key" :options="keyOptions" />
+          </div>
+          <div class="col-5">
+            <q-select outlined v-model="mode" :options="modeOptions" />
+          </div>
         </div>
-        <div class="col-5">
-          <q-select outlined v-model="mode" :options="modeOptions" />
-        </div>
-      </div>
-      <q-separator class="q-my-md"></q-separator>
+        <q-separator class="q-my-md"></q-separator>
 
-      <div class="row options-width">
-        <div class="text-h6 col items-center row">Number of chords:</div>
-        <div class="col">
-          <q-slider
-            v-model="numberOfChords"
-            color="green"
-            markers
-            snap
-            marker-labels
-            :min="3"
-            :max="8"
-          />
+        <div class="row options-width">
+          <div class="text-h6 col items-center row">Number of chords:</div>
+          <div class="col">
+            <q-slider
+              v-model="numberOfChords"
+              color="green"
+              markers
+              snap
+              marker-labels
+              :min="3"
+              :max="8"
+            />
+          </div>
         </div>
-      </div>
-      <q-separator class="q-my-md"></q-separator>
+        <q-separator class="q-my-md"></q-separator>
 
-      <div class="row items-center text-h6 options-width">
-        <div class="col">Chords included in progression:</div>
-        <div class="col text-subtitle1">
-          <q-option-group
-            v-model="possibleChords"
-            :options="possibleChordOptions"
-            inline
-            color="green"
-            type="checkbox"
-          />
+        <div class="row items-center text-h6 options-width">
+          <div class="col">Chords included in progression:</div>
+          <div class="col text-subtitle1">
+            <q-option-group
+              v-model="possibleChords"
+              :options="possibleChordOptions"
+              inline
+              color="green"
+              type="checkbox"
+            />
+          </div>
         </div>
+        <q-separator class="q-my-md"></q-separator>
+
+        <div class="row items-center text-h6 options-width"></div>
       </div>
     </div>
   </q-page>
 </template>
 
 <script setup>
-import generateProgression from '../utils/generateProgression.js'
-import { generateBasicChordNotes } from '../utils/chordKeyMapping.js'
+import { generateProgression, generateChords } from '../utils/generateProgression.js'
 import Soundfont from 'soundfont-player'
 import { ref, computed, onMounted } from 'vue'
 
-const progressionString = ref(null)
-const progressionArray = computed(() => {
-  if (!progressionString.value) return []
-  else return progressionString.value.split('-')
-})
+const progressionAsRomanNumerals = ref([])
+const progressionAsChords = ref([])
 const mode = ref('major')
 const modeOptions = ref([
   {
@@ -129,9 +132,16 @@ const possibleChords = ref([...possibleChordOptions.value.map((chord) => chord.v
 
 function handleGenerateProgression() {
   stopProgressionLoop()
-  progressionString.value = generateProgression(mode.value, numberOfChords.value, [
+  progressionAsRomanNumerals.value = generateProgression(mode.value, numberOfChords.value, [
     ...possibleChords.value,
   ])
+  progressionAsChords.value = generateChords(
+    key.value,
+    mode.value,
+    progressionAsRomanNumerals.value,
+  )
+  console.log('progressionAsChords')
+  console.log(progressionAsChords.value)
 }
 
 // Audio player:
@@ -174,14 +184,12 @@ function playProgression() {
       return
     }
 
-    const chord = progressionArray.value[currentChordIndex]
-    const chordArray = generateBasicChordNotes(key.value, mode.value, chord)
-    const chordWithOctaves = chordArray.map((note) => `${note}4`)
-    playChord(chordWithOctaves, audioCtx.currentTime)
+    const chord = progressionAsChords.value[currentChordIndex]
+    playChord(chord, audioCtx.currentTime)
 
     currentChordIndex++
 
-    if (currentChordIndex >= progressionArray.value.length) {
+    if (currentChordIndex >= progressionAsChords.value.length) {
       // Finished progression — reset immediately and start again after delay
       currentChordIndex = 0
       loopTimeout = setTimeout(playNextChord, intervalBetweenChords)
@@ -197,5 +205,12 @@ function playProgression() {
 <style scoped>
 .options-width {
   width: 400px;
+}
+.options-border {
+  border: 1px solid rgba(0, 0, 0, 0.48);
+}
+
+.options-header-border {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.48);
 }
 </style>
