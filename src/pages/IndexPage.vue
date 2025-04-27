@@ -151,7 +151,7 @@ const piano = ref(null)
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
 onMounted(async () => {
-  piano.value = await Soundfont.instrument(audioCtx, 'electric_piano_1')
+  piano.value = await Soundfont.instrument(audioCtx, 'electric_piano_2')
 })
 
 function playChord(notes, startTime) {
@@ -176,7 +176,7 @@ function playProgression() {
   isPlaying.value = true
 
   let currentChordIndex = 0
-  const intervalBetweenChords = 2000 // ms
+  const intervalBetweenChords = 2500 // ms
 
   function playNextChord() {
     if (!isPlaying.value) {

@@ -68,11 +68,24 @@ function chooseRandomNote(noteSelection) {
   return noteSelection[getRandomInt(noteSelection.length)]
 }
 
-function distanceBetweenTwoNotes(note1, note2) {
+function proximity(note1, note2) {
   const totalNotes = 7
   const upwardDistance = (note2 - note1 + totalNotes) % totalNotes
   const downwardDistance = (note1 - note2 + totalNotes) % totalNotes
   return Math.min(upwardDistance, downwardDistance)
+}
+
+// In relation to note1
+function signedProximity(note1, note2) {
+  const totalNotes = 7
+  const upwardDistance = (note2 - note1 + totalNotes) % totalNotes
+  const downwardDistance = (note1 - note2 + totalNotes) % totalNotes
+
+  if (upwardDistance === downwardDistance) {
+    return 0
+  }
+
+  return upwardDistance < downwardDistance ? upwardDistance : -downwardDistance
 }
 
 function generateVoicedChords(tonic, mode, unvoicedChords) {
@@ -103,7 +116,7 @@ function generateVoicedChords(tonic, mode, unvoicedChords) {
 
           // choose note closest to previousSopranoNote
           const noteSelectionByDistance = voiceNoteSelection.map((note) => {
-            return distanceBetweenTwoNotes(
+            return proximity(
               notesOctaveSort.indexOf(note),
               notesOctaveSort.indexOf(previousSopranoNote),
             )
@@ -129,7 +142,7 @@ function generateVoicedChords(tonic, mode, unvoicedChords) {
           }
 
           const noteSelectionByDistance = voiceNoteSelection.map((note) => {
-            return distanceBetweenTwoNotes(
+            return proximity(
               notesOctaveSort.indexOf(note),
               notesOctaveSort.indexOf(previousBassNote),
             )
@@ -148,7 +161,7 @@ function generateVoicedChords(tonic, mode, unvoicedChords) {
           const previousTenorNote = chordProgression[chordProgression.length - 1][1]
 
           const noteSelectionByDistance = voiceNoteSelection.map((note) => {
-            return distanceBetweenTwoNotes(
+            return proximity(
               notesOctaveSort.indexOf(note),
               notesOctaveSort.indexOf(previousTenorNote),
             )
@@ -195,16 +208,118 @@ function generateVoicedChords(tonic, mode, unvoicedChords) {
       voicedChord[voice] = selectedNote // assign note
     })
 
+    // generate chord octaves
+    let bassWithOctave
+    let tenorWithOctave
+    let altoWithOctave
+    let sopranoWithOctave
+    if (chordProgression.length === 0) {
+      // first chord
+      bassWithOctave = `${voicedChord.bass}2`
+      sopranoWithOctave = isWithinXOctaves(2, bassWithOctave, `${voicedChord.soprano}4`)
+        ? `${voicedChord.soprano}5` // if within 2 octaves of bass, throw soprano octave up
+        : `${voicedChord.soprano}4`
+      altoWithOctave = generateClosestNoteBelow(sopranoWithOctave, voicedChord.alto)
+      tenorWithOctave = generateClosestNoteBelow(altoWithOctave, voicedChord.tenor)
+    } else {
+      sopranoWithOctave = generateClosestNote(
+        chordProgression[chordProgression.length - 1][3],
+        voicedChord.soprano,
+      )
+      bassWithOctave = generateClosestNote(
+        chordProgression[chordProgression.length - 1][0],
+        voicedChord.bass,
+      )
+      const potentialAltoNote = generateClosestNote(
+        chordProgression[chordProgression.length - 1][2],
+        voicedChord.alto,
+      )
+      isNoteLower(potentialAltoNote, sopranoWithOctave)
+        ? (altoWithOctave = potentialAltoNote)
+        : generateClosestNoteBelow(sopranoWithOctave, voicedChord.alto)
+      const potentialTenorNote = generateClosestNote(
+        chordProgression[chordProgression.length - 1][1],
+        voicedChord.tenor,
+      )
+      isNoteLower(potentialTenorNote, altoWithOctave)
+        ? (tenorWithOctave = potentialTenorNote)
+        : generateClosestNoteBelow(tenorWithOctave, voicedChord.tenor)
+    }
+
     // assign chord
-    chordProgression.push([
-      `${voicedChord.bass}2`,
-      `${voicedChord.tenor}3`,
-      `${voicedChord.alto}4`,
-      `${voicedChord.soprano}5`,
-    ])
+    chordProgression.push([bassWithOctave, tenorWithOctave, altoWithOctave, sopranoWithOctave])
   })
 
   return chordProgression
+}
+
+function generateClosestNote(startingNote, noteWithoutOctave) {
+  const startingNoteOctave = startingNote[startingNote.length - 1]
+  const startingNoteWithoutOctave = startingNote.replace(startingNoteOctave, '')
+
+  const startingNoteIndex = notesOctaveSort.indexOf(startingNoteWithoutOctave)
+  const noteWithoutOctaveIndex = notesOctaveSort.indexOf(noteWithoutOctave)
+  let octaveForResultingNote
+
+  const signedProximityBetween = signedProximity(startingNoteWithoutOctave, noteWithoutOctaveIndex)
+
+  if (startingNoteIndex + signedProximityBetween < 0) {
+    octaveForResultingNote = parseInt(startingNoteOctave) - 1
+  } else if (startingNoteIndex + signedProximityBetween > 6) {
+    octaveForResultingNote = parseInt(startingNoteOctave + 1)
+  } else {
+    octaveForResultingNote = parseInt(startingNoteOctave)
+  }
+
+  return `${noteWithoutOctave}${octaveForResultingNote}`
+}
+
+function generateClosestNoteBelow(noteWithOctave, noteWithoutOctave) {
+  const higherNoteOctave = noteWithOctave[noteWithOctave.length - 1]
+  const higherNoteWithoutOctave = noteWithOctave.replace(higherNoteOctave, '')
+
+  const higherNoteIndex = notesOctaveSort.indexOf(higherNoteWithoutOctave)
+  const lowerNoteIndex = notesOctaveSort.indexOf(noteWithoutOctave)
+
+  if (higherNoteIndex > lowerNoteIndex) {
+    // within same octave
+    return `${noteWithoutOctave}${higherNoteOctave}`
+  } else {
+    // go to lower octave
+    return `${noteWithoutOctave}${parseInt(higherNoteOctave) - 1}`
+  }
+}
+
+function isWithinXOctaves(numberOfOctaves, lowerNote, higherNote) {
+  let lowerNoteOctave = lowerNote[lowerNote.length - 1]
+  const lowerNoteWithoutOctave = lowerNote.replace(lowerNoteOctave, '')
+  let higherNoteOctave = higherNote[higherNote.length - 1]
+  const higherNoteWithoutOctave = higherNote.replace(higherNoteOctave, '')
+  const lowerNoteAsNumber = notesOctaveSort[lowerNoteWithoutOctave]
+  const higherNoteAsNumber = notesOctaveSort[higherNoteWithoutOctave]
+
+  if (parseInt(lowerNoteOctave) + numberOfOctaves > parseInt(higherNoteOctave)) {
+    return true
+  } else if (parseInt(lowerNoteOctave) + numberOfOctaves === parseInt(higherNoteOctave)) {
+    return lowerNoteAsNumber > higherNoteAsNumber
+  } else {
+    return false
+  }
+}
+
+function isNoteLower(possiblyLowerNote, possiblyHigherNote) {
+  const possiblyLowerNoteOctave = possiblyLowerNote[possiblyLowerNote.length - 1]
+  const possiblyLowerNoteWithoutOctave = possiblyLowerNote.replace(possiblyLowerNoteOctave, '')
+  const possiblyHigherNoteOctave = possiblyHigherNote[possiblyHigherNote.length - 1]
+  const possiblyHigherNoteWithoutOctave = possiblyHigherNote.replace(possiblyHigherNoteOctave, '')
+  if (parseInt(possiblyLowerNoteOctave) > parseInt(possiblyHigherNoteOctave)) return false
+  else if (parseInt(possiblyLowerNoteOctave) === parseInt(possiblyHigherNoteOctave)) {
+    if (signedProximity(possiblyHigherNoteWithoutOctave, possiblyLowerNoteWithoutOctave) >= 0)
+      return false
+    else return true
+  } else {
+    return true
+  }
 }
 
 function removeRomanNumeralQuality(romanNumeral) {
