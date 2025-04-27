@@ -9,6 +9,7 @@
 - Saving progressions
 - Exporting progressions to midi
 - Changing BPM
+- Mobile support
 - Actual voice leading for chords
 
 Built with Quasar and Vue.js
