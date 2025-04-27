@@ -37,12 +37,6 @@ export default defineConfig((/* ctx */) => {
         node: 'node20',
       },
 
-      publicPath: '/',
-
-      extendViteConf(viteConf) {
-        viteConf.base = './'
-      },
-
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
       // vueDevtools,
