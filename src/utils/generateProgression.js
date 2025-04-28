@@ -6,18 +6,28 @@ import {
   majorScaleMap,
   romanNumeralToIndexMap,
   notesOctaveSort,
+  majorKeyLowercaseRomanNumeralToChordQualityMap,
+  harmonicMinorLowercaseRomanNumeralToChordQualityMap,
 } from './chordKeyMapping'
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max)
 }
 
-function generateProgression(mode, numberOfChords, possibleChords) {
+function generateProgression(
+  mode,
+  numberOfChords,
+  possibleChords,
+  allowModalMixture,
+  allowRepeatChords,
+) {
+  const possibleChordsClone = [...possibleChords]
   const chordI = mode === 'major' ? 'I' : 'i'
+  if (!allowRepeatChords) possibleChordsClone.shift() // remove I chord
 
   const majorMinorMap = {
-    0: 'major',
-    1: 'minor',
+    0: majorKeyLowercaseRomanNumeralToChordQualityMap,
+    1: harmonicMinorLowercaseRomanNumeralToChordQualityMap,
   }
 
   const indexOfIChord = getRandomInt(4)
@@ -25,22 +35,29 @@ function generateProgression(mode, numberOfChords, possibleChords) {
   const chordProgression = []
 
   for (let i = 0; i < numberOfChords; i++) {
-    const quality = majorMinorMap[getRandomInt(2)]
     let chord
 
     if (indexOfIChord === i) {
       chord = chordI
     } else {
-      const chordIndexSelection = getRandomInt(possibleChords.length)
-      chord = possibleChords[chordIndexSelection]
-      possibleChords.splice(chordIndexSelection, 1)
+      const chordIndexSelection = getRandomInt(possibleChordsClone.length)
+      chord = possibleChordsClone[chordIndexSelection]
+      if (!allowRepeatChords) possibleChordsClone.splice(chordIndexSelection, 1)
+
+      let quality
+      if (allowModalMixture) {
+        quality = majorMinorMap[getRandomInt(2)][chord]
+      } else if (mode === 'major') {
+        quality = majorKeyLowercaseRomanNumeralToChordQualityMap[chord]
+      } else if (mode === 'minor') {
+        quality = harmonicMinorLowercaseRomanNumeralToChordQualityMap[chord]
+      }
 
       if (chord != 'vii' && chord.toLowerCase() != 'i' && quality === 'major') {
         chord = chord.toUpperCase()
-      } else if (chord == 'vii') {
-        if (quality === 'major') chord = chord.toUpperCase()
-        else chord = `${chord} dim`
       }
+
+      if (quality.includes('dim')) chord = `${chord} dim`
     }
 
     chordProgression.push(chord)
@@ -329,8 +346,12 @@ function removeRomanNumeralQuality(romanNumeral) {
 function generateRootPositionChordNotes(tonic, mode, chordRomanNumeral) {
   const chordQuality = chordQualityFromRomanNumeral(chordRomanNumeral)
   const chordIndex = romanNumeralToIndexMap[removeRomanNumeralQuality(chordRomanNumeral)]
+  const modeForChord =
+    majorKeyLowercaseRomanNumeralToChordQualityMap[chordRomanNumeral.toLowerCase()] === chordQuality
+      ? 'major'
+      : 'minor'
   const scale =
-    mode === 'minor'
+    modeForChord === 'minor'
       ? harmonicMinorScaleMap[tonic.toUpperCase()]
       : majorScaleMap[tonic.toUpperCase()]
 

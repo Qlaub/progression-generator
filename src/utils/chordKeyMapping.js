@@ -84,3 +84,23 @@ export const romanNumeralToIndexMap = {
 }
 
 export const notesOctaveSort = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+
+export const majorKeyLowercaseRomanNumeralToChordQualityMap = {
+  i: 'major',
+  ii: 'minor',
+  iii: 'minor',
+  iv: 'major',
+  v: 'major',
+  vi: 'minor',
+  vii: 'dim',
+}
+
+export const harmonicMinorLowercaseRomanNumeralToChordQualityMap = {
+  i: 'minor',
+  ii: 'dim',
+  iii: 'major',
+  iv: 'minor',
+  v: 'major',
+  vi: 'major',
+  vii: 'dim',
+}

@@ -70,7 +70,16 @@
         </div>
         <q-separator class="q-my-md"></q-separator>
 
-        <div class="row items-center text-h6 options-width"></div>
+        <div class="row items-center text-h6 options-width">
+          <div class="col">Allow modal mixture:</div>
+          <q-checkbox class="col" color="green" v-model="allowModalMixture" />
+        </div>
+        <q-separator class="q-my-md"></q-separator>
+
+        <div class="row items-center text-h6 options-width">
+          <div class="col">Allow repeat chords:</div>
+          <q-checkbox class="col" color="green" v-model="allowRepeatChords" />
+        </div>
       </div>
     </div>
   </q-page>
@@ -81,6 +90,8 @@ import { generateProgression, generateChords } from '../utils/generateProgressio
 import Soundfont from 'soundfont-player'
 import { ref, computed, onMounted } from 'vue'
 
+const allowModalMixture = ref(false)
+const allowRepeatChords = ref(false)
 const progressionAsRomanNumerals = ref([])
 const progressionAsChords = ref([])
 const mode = ref('major')
@@ -132,9 +143,13 @@ const possibleChords = ref([...possibleChordOptions.value.map((chord) => chord.v
 
 function handleGenerateProgression() {
   stopProgressionLoop()
-  progressionAsRomanNumerals.value = generateProgression(mode.value, numberOfChords.value, [
-    ...possibleChords.value,
-  ])
+  progressionAsRomanNumerals.value = generateProgression(
+    mode.value,
+    numberOfChords.value,
+    possibleChords.value,
+    allowModalMixture.value,
+    allowRepeatChords.value,
+  )
   progressionAsChords.value = generateChords(
     key.value,
     mode.value,
