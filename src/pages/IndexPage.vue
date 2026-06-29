@@ -16,14 +16,21 @@
       <div class="q-mb-md">Progression:</div>
       <div class="row items-start justify-center q-gutter-sm">
         <div v-for="(slot, i) in progression" :key="i" class="column items-center">
+          <div class="chord-notes-hint text-caption text-grey-8">
+            {{ hoveredChord === i ? chordNotes(key, slot.roman).join(' ') : '' }}
+          </div>
           <q-select
             outlined
             dense
+            emit-value
+            map-options
             bg-color="green-2"
             :model-value="slot.roman"
             :options="optionsForSlot(slot.roman)"
             @update:model-value="(value) => onChordChange(i, value)"
-            style="min-width: 96px"
+            @mouseenter="hoveredChord = i"
+            @mouseleave="hoveredChord = null"
+            style="min-width: 120px"
           />
           <q-btn
             flat
@@ -119,6 +126,8 @@ import {
   generateChords,
   getAvailableChords,
   setRomanToMode,
+  chordName,
+  chordNotes,
 } from '../utils/generateProgression.js'
 import Soundfont from 'soundfont-player'
 import { ref, computed, watch, onMounted } from 'vue'
@@ -129,6 +138,8 @@ const allowRepeatChords = ref(false)
 const reVoiceWhole = ref(false)
 // Locked chords also keep their exact voicing (vs. only their Roman-numeral identity).
 const lockVoicingToo = ref(false)
+// Index of the chord slot currently hovered, for showing its notes as a hint.
+const hoveredChord = ref(null)
 const defaultKey = 'C'
 const defaultProgression = ['I', 'vi', 'IV', 'V']
 // Each slot: { roman, locked, voicing: [bass, tenor, alto, soprano] }
@@ -191,12 +202,14 @@ const availableChords = computed(() =>
   getAvailableChords(mode.value, possibleChords.value, allowModalMixture.value),
 )
 
-// Always include the slot's own value so a selected chord stays visible even if its
-// scale degree is later unchecked.
+// Options for one dropdown: the available Romans (plus the slot's own value so a selected
+// chord stays visible even if its degree is later unchecked), each labelled with the chord
+// name spelled in the current key. Referencing key.value keeps labels reactive to key changes.
 function optionsForSlot(roman) {
-  return availableChords.value.includes(roman)
+  const romans = availableChords.value.includes(roman)
     ? availableChords.value
     : [...availableChords.value, roman]
+  return romans.map((value) => ({ label: `${value} ( ${chordName(key.value, value)} )`, value }))
 }
 
 // Voicings drive playback; expose them in the shape the audio player already expects.
@@ -347,5 +360,11 @@ function playProgression() {
 
 .options-header-border {
   border-bottom: 1px solid rgba(0, 0, 0, 0.48);
+}
+
+/* Reserve space above each dropdown so the hovered-chord notes hint doesn't shift layout */
+.chord-notes-hint {
+  min-height: 1.5em;
+  line-height: 1.5em;
 }
 </style>

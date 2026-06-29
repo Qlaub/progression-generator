@@ -389,7 +389,8 @@ function removeRomanNumeralQuality(romanNumeral) {
   return romanNumeral.toLowerCase().replace('dim', '').trim()
 }
 
-function generateRootPositionChordNotes(tonic, mode, chordRomanNumeral) {
+// Root note of a chord in a given key, spelled to match how the chord is voiced.
+function chordRootNote(tonic, chordRomanNumeral) {
   const chordQuality = chordQualityFromRomanNumeral(chordRomanNumeral)
   const chordIndex = romanNumeralToIndexMap[removeRomanNumeralQuality(chordRomanNumeral)]
   const modeForChord =
@@ -401,7 +402,25 @@ function generateRootPositionChordNotes(tonic, mode, chordRomanNumeral) {
       ? harmonicMinorScaleMap[tonic.toUpperCase()]
       : majorScaleMap[tonic.toUpperCase()]
 
-  const root = scale[chordIndex]
+  return scale[chordIndex]
+}
+
+// Human-readable chord name in the given key, e.g. 'C', 'Am', 'Bdim'.
+function chordName(tonic, chordRomanNumeral) {
+  const root = chordRootNote(tonic, chordRomanNumeral)
+  const quality = chordQualityFromRomanNumeral(chordRomanNumeral)
+  const suffix = quality === 'minor' ? 'm' : quality === 'dim' ? 'dim' : ''
+  return `${root}${suffix}`
+}
+
+// Root-position triad notes of a chord in the given key, e.g. ['C', 'E', 'G'].
+function chordNotes(tonic, chordRomanNumeral) {
+  return generateRootPositionChordNotes(tonic, null, chordRomanNumeral)
+}
+
+function generateRootPositionChordNotes(tonic, mode, chordRomanNumeral) {
+  const chordQuality = chordQualityFromRomanNumeral(chordRomanNumeral)
+  const root = chordRootNote(tonic, chordRomanNumeral)
 
   let chordArray
   if (chordQuality === 'minor') chordArray = minorTriadMap[root]
@@ -441,4 +460,11 @@ function chordQualityFromRomanNumeral(chordRomanNumeral) {
   return chordQuality
 }
 
-export { generateChords, generateProgression, getAvailableChords, setRomanToMode }
+export {
+  generateChords,
+  generateProgression,
+  getAvailableChords,
+  setRomanToMode,
+  chordName,
+  chordNotes,
+}
