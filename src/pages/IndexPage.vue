@@ -14,13 +14,29 @@
     </div>
     <div class="q-mt-lg column text-h4 items-center justify-center bg-blue-1 q-pa-md">
       <div class="q-mb-md">Progression:</div>
-      <div
-        class="q-ml-sm q-pa-sm rounded-borders"
-        :class="progressionAsChords.length === 0 ? 'bg-yellow-2' : 'bg-green-2'"
-      >
-        {{
-          progressionAsRomanNumerals.length > 0 ? progressionAsRomanNumerals.join('-') : '&nbsp;'
-        }}
+      <div class="row items-start justify-center q-gutter-sm">
+        <div v-for="(slot, i) in progression" :key="i" class="column items-center">
+          <q-select
+            outlined
+            dense
+            bg-color="green-2"
+            :model-value="slot.roman"
+            :options="optionsForSlot(slot.roman)"
+            @update:model-value="(value) => onChordChange(i, value)"
+            style="min-width: 96px"
+          />
+          <q-btn
+            flat
+            round
+            dense
+            class="q-mt-xs"
+            :icon="slot.locked ? 'lock' : 'lock_open'"
+            :color="slot.locked ? 'primary' : 'grey-6'"
+            @click="toggleLock(i)"
+          >
+            <q-tooltip>{{ slot.locked ? 'Locked' : 'Unlocked' }}</q-tooltip>
+          </q-btn>
+        </div>
       </div>
     </div>
 
@@ -35,7 +51,7 @@
             <q-select outlined v-model="key" :options="keyOptions" />
           </div>
           <div class="col-5">
-            <q-select outlined v-model="mode" :options="modeOptions" />
+            <q-select outlined emit-value map-options v-model="mode" :options="modeOptions" />
           </div>
         </div>
         <q-separator class="q-my-md"></q-separator>
@@ -80,22 +96,49 @@
           <div class="col">Allow repeat chords:</div>
           <q-checkbox class="col" color="green" v-model="allowRepeatChords" />
         </div>
+        <q-separator class="q-my-md"></q-separator>
+
+        <div class="row items-center text-h6 options-width">
+          <div class="col">Re-voice whole progression on chord change:</div>
+          <q-checkbox class="col" color="green" v-model="reVoiceWhole" />
+        </div>
+        <q-separator class="q-my-md"></q-separator>
+
+        <div class="row items-center text-h6 options-width">
+          <div class="col">Locked chords keep their voicing:</div>
+          <q-checkbox class="col" color="green" v-model="lockVoicingToo" />
+        </div>
       </div>
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { generateProgression, generateChords } from '../utils/generateProgression.js'
+import {
+  generateProgression,
+  generateChords,
+  getAvailableChords,
+  setRomanToMode,
+} from '../utils/generateProgression.js'
 import Soundfont from 'soundfont-player'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const allowModalMixture = ref(false)
 const allowRepeatChords = ref(false)
+// Re-voice the whole progression (vs. just the changed chord) when a chord is edited.
+const reVoiceWhole = ref(false)
+// Locked chords also keep their exact voicing (vs. only their Roman-numeral identity).
+const lockVoicingToo = ref(false)
 const defaultKey = 'C'
 const defaultProgression = ['I', 'vi', 'IV', 'V']
-const progressionAsRomanNumerals = ref([...defaultProgression])
-const progressionAsChords = ref(generateChords(defaultKey, 'major', defaultProgression))
+// Each slot: { roman, locked, voicing: [bass, tenor, alto, soprano] }
+const progression = ref(
+  generateChords(defaultKey, 'major', defaultProgression).map((voicing, i) => ({
+    roman: defaultProgression[i],
+    locked: false,
+    voicing,
+  })),
+)
 const mode = ref('major')
 const modeOptions = ref([
   {
@@ -143,23 +186,98 @@ const possibleChordOptions = computed(() => [
 
 const possibleChords = ref([...possibleChordOptions.value.map((chord) => chord.value)])
 
+// Roman numerals offered in each chord dropdown, derived from the current options.
+const availableChords = computed(() =>
+  getAvailableChords(mode.value, possibleChords.value, allowModalMixture.value),
+)
+
+// Always include the slot's own value so a selected chord stays visible even if its
+// scale degree is later unchecked.
+function optionsForSlot(roman) {
+  return availableChords.value.includes(roman)
+    ? availableChords.value
+    : [...availableChords.value, roman]
+}
+
+// Voicings drive playback; expose them in the shape the audio player already expects.
+const progressionAsChords = computed(() => progression.value.map((slot) => slot.voicing))
+
+// Voice `slots` (optionally keeping `fixedVoicings` per index) and commit to state.
+function applyVoicings(slots, fixedVoicings = []) {
+  const voicings = generateChords(
+    key.value,
+    mode.value,
+    slots.map((slot) => slot.roman),
+    fixedVoicings,
+  )
+  progression.value = slots.map((slot, i) => ({ ...slot, voicing: voicings[i] }))
+}
+
 function handleGenerateProgression() {
   stopProgressionLoop()
-  progressionAsRomanNumerals.value = generateProgression(
+  const romans = generateProgression(
     mode.value,
     numberOfChords.value,
     possibleChords.value,
     allowModalMixture.value,
     allowRepeatChords.value,
   )
-  progressionAsChords.value = generateChords(
-    key.value,
-    mode.value,
-    progressionAsRomanNumerals.value,
-  )
-  console.log('progressionAsChords')
-  console.log(progressionAsChords.value)
+  // Keep locked chords (by index); take a fresh Roman for the rest.
+  const slots = romans.map((roman, i) => {
+    const existing = progression.value[i]
+    return existing && existing.locked
+      ? { roman: existing.roman, locked: true, voicing: existing.voicing }
+      : { roman, locked: false, voicing: null }
+  })
+  const fixed = slots.map((slot) => (slot.locked && lockVoicingToo.value ? slot.voicing : null))
+  applyVoicings(slots, fixed)
 }
+
+function onChordChange(index, newRoman) {
+  stopProgressionLoop()
+  const slots = progression.value.map((slot, i) =>
+    i === index ? { ...slot, roman: newRoman } : { ...slot },
+  )
+  const fixed = reVoiceWhole.value
+    ? slots.map((slot, i) => (i !== index && slot.locked && lockVoicingToo.value ? slot.voicing : null))
+    : slots.map((slot, i) => (i === index ? null : slot.voicing))
+  applyVoicings(slots, fixed)
+}
+
+function toggleLock(index) {
+  progression.value = progression.value.map((slot, i) =>
+    i === index ? { ...slot, locked: !slot.locked } : slot,
+  )
+}
+
+// Changing the tonic transposes every chord (Romans unchanged); pitches change, so re-voice fully.
+watch(key, () => {
+  stopProgressionLoop()
+  applyVoicings(progression.value.map((slot) => ({ ...slot })))
+})
+
+// Mode change: without modal mixture each chord adopts the new mode's quality for its degree;
+// with modal mixture every chord retains its own mode.
+watch(mode, (newMode) => {
+  stopProgressionLoop()
+  const slots = progression.value.map((slot) => ({
+    ...slot,
+    roman: allowModalMixture.value ? slot.roman : setRomanToMode(slot.roman, newMode),
+  }))
+  applyVoicings(slots)
+})
+
+// Turning modal mixture off: convert any borrowed chord back to the current mode so every
+// value remains a valid dropdown option.
+watch(allowModalMixture, (on) => {
+  if (on) return
+  const primary = getAvailableChords(mode.value, possibleChords.value, false)
+  const slots = progression.value.map((slot) => ({
+    ...slot,
+    roman: primary.includes(slot.roman) ? slot.roman : setRomanToMode(slot.roman, mode.value),
+  }))
+  applyVoicings(slots)
+})
 
 // Audio player:
 const isPlaying = ref(false)

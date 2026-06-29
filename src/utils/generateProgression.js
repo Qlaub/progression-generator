@@ -14,6 +14,45 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * max)
 }
 
+const scaleDegreeOrder = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii']
+
+function qualityMapForMode(mode) {
+  return mode === 'minor'
+    ? harmonicMinorLowercaseRomanNumeralToChordQualityMap
+    : majorKeyLowercaseRomanNumeralToChordQualityMap
+}
+
+// Build a Roman-numeral string from a lowercase scale degree and a chord quality.
+function degreeToRoman(degree, quality) {
+  if (quality === 'major') return degree.toUpperCase()
+  if (quality === 'dim') return `${degree} dim`
+  return degree // minor
+}
+
+// Ordered list of Roman numerals offered for the selected options. The current mode's
+// diatonic chords come first (in scale-degree order from the tonic); with modal mixture
+// the other mode's chords are appended, de-duped against the primary set.
+function getAvailableChords(mode, possibleChords, allowModalMixture) {
+  const degrees = scaleDegreeOrder.filter((degree) => possibleChords.includes(degree))
+  const primaryMap = qualityMapForMode(mode)
+  const primary = degrees.map((degree) => degreeToRoman(degree, primaryMap[degree]))
+
+  if (!allowModalMixture) return primary
+
+  const secondaryMap = qualityMapForMode(mode === 'major' ? 'minor' : 'major')
+  const secondary = degrees
+    .map((degree) => degreeToRoman(degree, secondaryMap[degree]))
+    .filter((roman) => !primary.includes(roman))
+
+  return [...primary, ...secondary]
+}
+
+// Re-derive a chord's quality from a mode's diatonic map, keeping its scale degree.
+function setRomanToMode(roman, mode) {
+  const degree = removeRomanNumeralQuality(roman)
+  return degreeToRoman(degree, qualityMapForMode(mode)[degree])
+}
+
 function generateProgression(
   mode,
   numberOfChords,
@@ -105,12 +144,19 @@ function signedProximity(note1, note2) {
   return upwardDistance < downwardDistance ? upwardDistance : -downwardDistance
 }
 
-function generateVoicedChords(tonic, mode, unvoicedChords) {
+function generateVoicedChords(tonic, mode, unvoicedChords, fixedVoicings = []) {
   // unvoicedChords = array of string arrays
+  // fixedVoicings = optional per-index voiced chords ([bass, tenor, alto, soprano]); when
+  // present for an index, that chord is kept as-is and seeds the next chord's voice leading.
   const voicesByPriority = ['soprano', 'bass', 'tenor', 'alto']
   const chordProgression = []
 
-  unvoicedChords.forEach((chord) => {
+  unvoicedChords.forEach((chord, index) => {
+    if (fixedVoicings[index]) {
+      chordProgression.push(fixedVoicings[index])
+      return
+    }
+
     let chordNoteSelection = [...chord]
     const voicedChord = {
       soprano: '',
@@ -375,10 +421,10 @@ function generateRootPositionChords(tonic, mode, progressionAsRomanNumerals) {
   return progressionAsChords
 }
 
-function generateChords(tonic, mode, progressionAsRomanNumerals) {
+function generateChords(tonic, mode, progressionAsRomanNumerals, fixedVoicings = []) {
   const rootChords = generateRootPositionChords(tonic, mode, progressionAsRomanNumerals)
 
-  return generateVoicedChords(tonic, mode, rootChords)
+  return generateVoicedChords(tonic, mode, rootChords, fixedVoicings)
 }
 
 function chordQualityFromRomanNumeral(chordRomanNumeral) {
@@ -395,4 +441,4 @@ function chordQualityFromRomanNumeral(chordRomanNumeral) {
   return chordQuality
 }
 
-export { generateChords, generateProgression }
+export { generateChords, generateProgression, getAvailableChords, setRomanToMode }
