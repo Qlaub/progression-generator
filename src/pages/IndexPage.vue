@@ -12,8 +12,8 @@
         >{{ isPlaying ? 'Stop playing' : 'Play progression' }}</q-btn
       >
     </div>
-    <div class="q-mt-lg row text-h5 items-center">
-      <div>Progression:</div>
+    <div class="q-mt-lg column text-h4 items-center justify-center bg-blue-1 q-pa-md">
+      <div class="q-mb-md">Progression:</div>
       <div
         class="q-ml-sm q-pa-sm rounded-borders"
         :class="progressionAsChords.length === 0 ? 'bg-yellow-2' : 'bg-green-2'"
@@ -92,8 +92,10 @@ import { ref, computed, onMounted } from 'vue'
 
 const allowModalMixture = ref(false)
 const allowRepeatChords = ref(false)
-const progressionAsRomanNumerals = ref([])
-const progressionAsChords = ref([])
+const defaultKey = 'C'
+const defaultProgression = ['I', 'vi', 'IV', 'V']
+const progressionAsRomanNumerals = ref([...defaultProgression])
+const progressionAsChords = ref(generateChords(defaultKey, 'major', defaultProgression))
 const mode = ref('major')
 const modeOptions = ref([
   {
@@ -106,7 +108,7 @@ const modeOptions = ref([
   },
 ])
 const numberOfChords = ref(4)
-const key = ref('C')
+const key = ref(defaultKey)
 const keyOptions = ref(['A', 'B', 'C', 'D', 'E', 'F', 'G'])
 const possibleChordOptions = computed(() => [
   {
